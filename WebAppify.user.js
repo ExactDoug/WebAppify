@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WebAppify
 // @namespace    https://github.com/ExactDoug/WebAppify
-// @version      0.3.3
+// @version      0.3.4
 // @description  Make any website an installable PWA.
 // @author       ExactDoug (forked from NoCLin)
 // @match        *://*/*
@@ -40,7 +40,7 @@
     }
 
     if (typeof GM_registerMenuCommand == 'undefined') {
-        globalglobalglobalThis.GM_registerMenuCommand = (caption, commandFunc, accessKey) => {
+        globalThis.GM_registerMenuCommand = (caption, commandFunc, accessKey) => {
             if (!document.body) {
                 if (document.readyState === 'loading'
                     && document.documentElement && document.documentElement.localName === 'html') {
@@ -300,6 +300,32 @@
             <option value="browser" ${manifest.display === 'browser' ? 'selected' : ''}>Browser</option>
         </select>
         <br>
+        <div id="tabbed-options" style="border:1px solid #ccc; padding:10px; border-radius:5px; margin:5px 0;">
+            <label style="font-weight:bold;">
+                <input type="checkbox" id="enable-tabbed">
+                Enable Tabbed Mode
+            </label>
+            <small style="display:block; color:#666; margin-top:2px;">
+                Allows multiple tabs within the PWA window (Chrome/Edge on desktop &amp; ChromeOS).
+                Requires <code>chrome://flags/#enable-desktop-pwas-tab-strip</code> on non-ChromeOS.
+            </small>
+            <div id="tabbed-details" style="display:none; margin-top:8px; padding-top:8px; border-top:1px solid #eee;">
+                <label>
+                    <input type="checkbox" id="enable-home-tab">
+                    Pin a Home Tab
+                </label>
+                <small style="display:block; color:#666; margin:2px 0 6px 20px;">
+                    A pinned tab locked to your Start URL. Links opened from it appear in new tabs.
+                </small>
+                <label for="new-tab-url">New Tab Button URL:</label>
+                <input type="text" id="new-tab-url" value="" placeholder="blank = start URL"
+                       style="width:100%; box-sizing:border-box;">
+                <small style="display:block; color:#666; margin-top:2px;">
+                    URL opened when the user clicks the + button. Leave blank to use Start URL.
+                </small>
+            </div>
+        </div>
+        <br>
         <div>
                 <label for="webappify-icon">Icon:</label>
             <img id="webappify-icon" width="64" height="64" alt="icon" style="
@@ -317,7 +343,7 @@
         <label for="bg-color">Background Color:</label>
         <input type="text" id="bg-color" name="background_color" value="${manifest.background_color}">
         <br>
-        <label for="bg-color">Theme Color:</label>
+        <label for="theme-color">Theme Color:</label>
         <input type="text" id="theme-color" name="theme_color" value="${manifest.theme_color}">
         <br>
         <button type="submit">Install!</button>
@@ -348,16 +374,49 @@
         input.click();
     })
 
+    document.getElementById("enable-tabbed").addEventListener("change", function () {
+        document.getElementById("tabbed-details").style.display = this.checked ? "block" : "none";
+    });
+
     form.addEventListener('submit', function (e) {
         e.preventDefault();
         modal.style.display = 'none';
 
         for (let key in manifest) {
             if (key === "icons") continue;
-            manifest[key] = form.elements[key].value
+            if (form.elements[key]) {
+                manifest[key] = form.elements[key].value;
+            }
         }
-        manifest["icons"][0]["src"] = document.querySelector("#webappify-icon").src
-        setupManifest(manifest)
+        manifest["icons"][0]["src"] = document.querySelector("#webappify-icon").src;
+
+        // Tabbed mode
+        const tabbedEnabled = document.getElementById("enable-tabbed").checked;
+        if (tabbedEnabled) {
+            manifest.display_override = ["tabbed"];
+
+            const homeTabEnabled = document.getElementById("enable-home-tab").checked;
+            const newTabUrl = document.getElementById("new-tab-url").value.trim();
+
+            manifest.tab_strip = {};
+
+            if (homeTabEnabled) {
+                manifest.tab_strip.home_tab = {
+                    scope_patterns: [
+                        { pathname: new URL(manifest.start_url).pathname }
+                    ]
+                };
+            }
+
+            if (newTabUrl) {
+                manifest.tab_strip.new_tab_button = { url: newTabUrl };
+            }
+        } else {
+            delete manifest.display_override;
+            delete manifest.tab_strip;
+        }
+
+        setupManifest(manifest);
     });
 
     function showModal(show) {
