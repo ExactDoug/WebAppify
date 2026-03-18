@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WebAppify
 // @namespace    https://github.com/ExactDoug/WebAppify
-// @version      0.3.2
+// @version      0.3.3
 // @description  Make any website an installable PWA.
 // @author       ExactDoug (forked from NoCLin)
 // @match        *://*/*
@@ -158,7 +158,27 @@
                 resolve(dataURL);
             };
             image.onerror = (e) => {
-                reject(new Error('Failed to load image'));
+                // Fallback: try the site's own favicon
+                const favicon = document.querySelector("link[rel~='icon']");
+                const faviconUrl = favicon ? favicon.href : '/favicon.ico';
+                const fallback = new Image();
+                fallback.crossOrigin = 'anonymous';
+                fallback.src = faviconUrl;
+                fallback.onload = () => {
+                    ctx.drawImage(fallback, 0, 0, canvas.width, canvas.height);
+                    resolve(canvas.toDataURL());
+                };
+                fallback.onerror = () => {
+                    // Last resort: generated letter icon
+                    ctx.fillStyle = manifest.theme_color || '#ffffff';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = '#333333';
+                    ctx.font = 'bold 200px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(document.title.charAt(0).toUpperCase(), canvas.width / 2, canvas.height / 2);
+                    resolve(canvas.toDataURL());
+                };
             };
         });
     }
@@ -202,12 +222,12 @@
         document.querySelectorAll("link[rel='manifest']").forEach(e => e.remove())
         console.log("setupManifest", config)
 
-        const configBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(config))))
-        const dataUrl = `data:application/json;base64,${configBase64}`
+        const blob = new Blob([JSON.stringify(config)], {type: 'application/json'});
+        const blobUrl = URL.createObjectURL(blob);
 
         const link = document.createElement('link');
         link.rel = 'manifest';
-        link.href = dataUrl;
+        link.href = blobUrl;
         const head = document.getElementsByTagName('head')[0];
         head.appendChild(link);
     }
@@ -285,7 +305,7 @@
             <img id="webappify-icon" width="64" height="64" alt="icon" style="
                 background-size: 20px 20px;
                 background-position: 0 0, 10px 10px;
-                background-image: 
+                background-image:
                     linear-gradient(45deg,#eee 25%,transparent 0,transparent 75%,#eee 0,#eee),
                     linear-gradient(45deg, #eee 25%, #fff 0, #fff 75%, #eee 0, #eee);
                     "
@@ -293,7 +313,7 @@
         </div>
 
         <br>
-        
+
         <label for="bg-color">Background Color:</label>
         <input type="text" id="bg-color" name="background_color" value="${manifest.background_color}">
         <br>
