@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WebAppify
 // @namespace    https://github.com/ExactDoug/WebAppify
-// @version      0.3.1
+// @version      0.3.2
 // @description  Make any website an installable PWA.
 // @author       ExactDoug (forked from NoCLin)
 // @match        *://*/*
@@ -21,11 +21,11 @@
     // Bridges legacy GM_ APIs to the GM.* promise-based APIs.
     // =========================================================================
     if (typeof GM == 'undefined') {
-        this.GM = {};
+        globalThis.GM = {};
     }
 
     if (typeof GM_addStyle == 'undefined') {
-        this.GM_addStyle = (aCss) => {
+        globalThis.GM_addStyle = (aCss) => {
             'use strict';
             let head = document.getElementsByTagName('head')[0];
             if (head) {
@@ -40,7 +40,7 @@
     }
 
     if (typeof GM_registerMenuCommand == 'undefined') {
-        this.GM_registerMenuCommand = (caption, commandFunc, accessKey) => {
+        globalglobalglobalThis.GM_registerMenuCommand = (caption, commandFunc, accessKey) => {
             if (!document.body) {
                 if (document.readyState === 'loading'
                     && document.documentElement && document.documentElement.localName === 'html') {
@@ -72,7 +72,7 @@
     }
 
     if (typeof GM_getResourceText == 'undefined') {
-        this.GM_getResourceText = (aRes) => {
+        globalThis.GM_getResourceText = (aRes) => {
             'use strict';
             return GM.getResourceUrl(aRes)
                 .then(url => fetch(url))
@@ -107,7 +107,7 @@
         'GM_xmlhttpRequest': 'xmlHttpRequest',
         'GM_getResourceText': 'getResourceText',
     }).forEach(([oldKey, newKey]) => {
-        let old = this[oldKey];
+        let old = globalThis[oldKey];
         if (old && (typeof GM[newKey] == 'undefined')) {
             GM[newKey] = function(...args) {
                 return new Promise((resolve, reject) => {
